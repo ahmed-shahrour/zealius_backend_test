@@ -10,7 +10,7 @@ exports.dbConnection = app => {
 
   db.on('connected', () => {
     console.log('MongoDB connected!');
-    app.listen(80, 'localhost');
+    app.listen(3000, 'localhost');
   });
   db.on('error', err => {
     console.log('Mongoose connection error: ' + err);
