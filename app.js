@@ -19,11 +19,13 @@ preSetup(app);
 // Routes of the app
 initRoutes(app);
 
-app.get('/', (req, res, next) => {
-  Promise.resolve()
-    .then(() => res.status(200).sendFile(`${appRoot}/views/welcome.html`))
-    .catch(error => next(error));
-});
+app.get('/', express.static(`${appRoot}/public`));
+
+// (req, res, next) => {
+//   Promise.resolve()
+//     .then(() => res.status(200).sendFile(`${appRoot}/views/welcome.html`))
+//     .catch(error => next(error));
+// });
 
 // Specific errors not handled by the above routes
 app.use(errorRoutes);
