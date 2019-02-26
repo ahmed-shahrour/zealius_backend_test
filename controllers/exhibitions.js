@@ -35,6 +35,7 @@ exports.getExhibitions = (req, res, next) => {
       if (!exhibitions) {
         const error = new Error('Could not find exhibitions.');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       }
       return res.status(200).json({
@@ -141,7 +142,6 @@ exports.postExhibition = (req, res, next) => {
               const error = new Error('gallery id not found!');
               error.statusCode = 404;
               error.isOperational = true;
-
               throw error;
             }
             return foundGallery;
@@ -171,6 +171,7 @@ exports.postExhibition = (req, res, next) => {
             if (!foundArtist) {
               const error = new Error('artist id not found!');
               error.statusCode = 404;
+              error.isOperational = true;
               throw error;
             }
             return foundArtist;
@@ -184,6 +185,7 @@ exports.postExhibition = (req, res, next) => {
       } else {
         const error = new Error('Invalid artist Id');
         error.statusCode(422);
+        error.isOperational = true;
         throw error;
       }
     }
@@ -211,6 +213,7 @@ exports.postExhibition = (req, res, next) => {
               if (!gallery) {
                 const error = new Error('Cannot find gallery!');
                 error.statusCode = 404;
+                error.isOperational = true;
                 throw error;
               } else {
                 gallery.exhibitions.push(exhibition);
@@ -232,6 +235,7 @@ exports.postExhibition = (req, res, next) => {
               if (!artist) {
                 const error = new Error('Cannot find artist!');
                 error.statusCode = 404;
+                error.isOperational = true;
                 throw error;
               } else {
                 artist.exhibitions.push(exhibition);
@@ -342,6 +346,7 @@ exports.patchExhibition = (req, res, next) => {
             if (!foundGallery) {
               const error = new Error('gallery id not found!');
               error.statusCode = 404;
+              error.isOperational = true;
               throw error;
             }
             return foundGallery;
@@ -405,6 +410,7 @@ exports.patchExhibition = (req, res, next) => {
               `${arrayIdsToRemoveExhibition[i]} does not exist for pulling`
             );
             error.statusCode = 404;
+            error.isOperational = true;
             throw error;
           } else {
             foundDoc.exhibitions.splice(
@@ -433,6 +439,7 @@ exports.patchExhibition = (req, res, next) => {
               `${arrayIdsToAddExhibition[i]} does not exist for pushing`
             );
             error.statusCode = 404;
+            error.isOperational = true;
             throw error;
           } else {
             foundDoc.exhibitions.push(exhibitionId);

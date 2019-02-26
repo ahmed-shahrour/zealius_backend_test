@@ -20,6 +20,7 @@ exports.signup = (req, res, next) => {
       if (user) {
         const error = new Error('Email Exists.');
         error.statusCode = 409;
+        error.isOperational = true;
         throw error;
       }
       return bcrypt.hash(password, 12);
@@ -77,6 +78,7 @@ exports.login = (req, res, next) => {
     if (!isValid) {
       const error = new Error('Error with body sent');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     } else {
       return isValid;
@@ -90,7 +92,7 @@ exports.login = (req, res, next) => {
       if (!user) {
         const error = new Error('Invalid Login');
         error.statusCode = 401;
-        error.data = null;
+        error.isOperational = true;
         throw error;
       }
       loadedUser = user;
@@ -102,7 +104,7 @@ exports.login = (req, res, next) => {
       if (!isEqual) {
         const error = new Error('Invalid Login');
         error.statusCode = 401;
-        error.data = null;
+        error.isOperational = true;
         throw error;
       }
       return tokensUtil.createTokens(loadedUser, config.secret);
@@ -145,6 +147,7 @@ exports.postSendResetEmail = (req, res, next) => {
         'Error with email provided, please check format and type'
       );
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     } else {
       return isValid;
@@ -160,6 +163,7 @@ exports.postSendResetEmail = (req, res, next) => {
       if (!user) {
         const error = new Error('Invalid Login');
         error.statusCode = 401;
+        error.isOperational = true;
         throw error;
       } else {
         foundUser = user;
@@ -222,6 +226,7 @@ exports.getResetPassword = (req, res, next) => {
     if (!userId) {
       const error = new Error('User ID not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 
@@ -242,6 +247,7 @@ exports.getResetPassword = (req, res, next) => {
       if (!user) {
         const error = new Error('User does not exist');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       } else {
         return res
@@ -265,6 +271,7 @@ exports.patchResetPassword = (req, res, next) => {
     if (!userId || !newPassword) {
       const error = new Error('User ID not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 
@@ -274,12 +281,14 @@ exports.patchResetPassword = (req, res, next) => {
     ) {
       const error = new Error('User ID invalid!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 
     if (newPassword.length > 30 || newPassword.length < 5) {
       const error = new Error('Password format is invalid!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
   };
@@ -293,6 +302,7 @@ exports.patchResetPassword = (req, res, next) => {
       if (!user) {
         const error = new Error('User does not exist');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       } else {
         foundUser = user;

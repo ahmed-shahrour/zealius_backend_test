@@ -65,6 +65,7 @@ exports.postGallery = (req, res, next) => {
     if (!name || !location || !contact || !description) {
       const error = new Error('Required Info to create gallery not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 
@@ -190,6 +191,7 @@ exports.deleteGallery = (req, res, next) => {
     if (!galleryId) {
       const error = new Error('Gallery ID not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 

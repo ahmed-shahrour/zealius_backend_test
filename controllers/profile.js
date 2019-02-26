@@ -12,6 +12,7 @@ exports.getProfile = (req, res, next) => {
       if (!user) {
         const error = new Error('Could not find user');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       }
       return user;
@@ -112,6 +113,7 @@ exports.patchChangePassword = (req, res, next) => {
     if (!userId || !oldPassword || !newPassword) {
       const error = new Error('User ID not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 
@@ -121,6 +123,7 @@ exports.patchChangePassword = (req, res, next) => {
     ) {
       const error = new Error('User ID invalid!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 
@@ -145,6 +148,7 @@ exports.patchChangePassword = (req, res, next) => {
       if (!user) {
         const error = new Error('User does not exist');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       } else {
         foundUser = user;
@@ -155,6 +159,7 @@ exports.patchChangePassword = (req, res, next) => {
       if (!isEqual) {
         const error = new Error('Invalid password');
         error.statusCode = 401;
+        error.isOperational = true;
         throw error;
       } else {
         return bcrypt.hash(newPassword, 12);
