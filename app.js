@@ -2,8 +2,6 @@ const express = require('express');
 const winston = require('./winston');
 const mongoose = require('mongoose');
 const appRoot = require('app-root-path');
-// const path = require('path');
-// const public = path.join(__dirname, 'public');
 
 mongoose.plugin(require('./util/diffPlugin'));
 
@@ -20,9 +18,6 @@ preSetup(app);
 
 // Routes of the app
 initRoutes(app);
-
-// app.get('/', express.static(`${appRoot}/public`));
-// app.get('/', express.static(public));
 
 app.use('/', (req, res, next) => {
   Promise.resolve()
