@@ -10,6 +10,7 @@ exports.getArtists = (req, res, next) => {
       if (!artists) {
         const error = new Error('Could not find artists.');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       }
       return artists;
@@ -36,6 +37,7 @@ exports.getSelectedArtist = (req, res, next) => {
       if (!artist) {
         const error = new Error('Could not find artist.');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       }
       return artist;
@@ -62,6 +64,7 @@ exports.postArtist = (req, res, next) => {
     if (!name) {
       const error = new Error('Required Info to create artist not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
   };
@@ -94,6 +97,7 @@ exports.patchArtist = (req, res, next) => {
     if (!name || !_id) {
       const error = new Error('Required Info to patch artist not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
   };
@@ -107,6 +111,7 @@ exports.patchArtist = (req, res, next) => {
       if (!foundArtist) {
         const error = new Error('Artist not found');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       } else {
         return (artist = foundArtist);
@@ -134,6 +139,7 @@ exports.deleteArtist = (req, res, next) => {
     if (!artistId) {
       const error = new Error('Artist ID not provided!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
 
@@ -143,6 +149,7 @@ exports.deleteArtist = (req, res, next) => {
     ) {
       const error = new Error('Artist ID invalid!');
       error.statusCode = 422;
+      error.isOperational = true;
       throw error;
     }
   };
@@ -154,10 +161,12 @@ exports.deleteArtist = (req, res, next) => {
       if (!artist) {
         const error = new Error('Artist does not exist!');
         error.statusCode = 404;
+        error.isOperational = true;
         throw error;
       } else if (artist.exhibitions.length !== 0) {
         const error = new Error('Cannot Delete an Artist with exhibitions!');
         error.statusCode = 403;
+        error.isOperational = true;
         throw error;
       } else {
         return artist;

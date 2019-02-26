@@ -2,6 +2,8 @@ const express = require('express');
 const winston = require('./winston');
 const mongoose = require('mongoose');
 const appRoot = require('app-root-path');
+// const path = require('path');
+// const public = path.join(__dirname, 'public');
 
 mongoose.plugin(require('./util/diffPlugin'));
 
@@ -19,13 +21,14 @@ preSetup(app);
 // Routes of the app
 initRoutes(app);
 
-app.get('/', express.static(`${appRoot}/public`));
+// app.get('/', express.static(`${appRoot}/public`));
+// app.get('/', express.static(public));
 
-// (req, res, next) => {
-//   Promise.resolve()
-//     .then(() => res.status(200).sendFile(`${appRoot}/views/welcome.html`))
-//     .catch(error => next(error));
-// });
+app.use('/', (req, res, next) => {
+  Promise.resolve()
+    .then(() => res.status(200).sendFile(`${appRoot}/views/welcome.html`))
+    .catch(error => next(error));
+});
 
 // Specific errors not handled by the above routes
 app.use(errorRoutes);
