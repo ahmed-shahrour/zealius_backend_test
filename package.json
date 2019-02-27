@@ -20,6 +20,7 @@
     "body-parser": "^1.18.3",
     "deep-diff": "^1.0.2",
     "express": "^4.16.4",
+    "http-errors": "^1.7.2",
     "jsonwebtoken": "^8.4.0",
     "lodash": "^4.17.11",
     "moment": "^2.24.0",

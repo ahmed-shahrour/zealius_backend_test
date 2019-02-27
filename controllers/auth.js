@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const sgMail = require('@sendgrid/mail');
 const mongoose = require('mongoose');
+const createError = require('http-errors');
 
 const User = require('../models/user');
 const tokensUtil = require('../util/creatingTokens');
@@ -10,6 +11,11 @@ sgMail.setApiKey(
   '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'
 );
 
+const userNotFoundError = createError(404, 'Could not find user.', {
+  isOperational: true,
+  isResSent: false,
+});
+
 exports.signup = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -18,10 +24,10 @@ exports.signup = (req, res, next) => {
   User.findOne({ email: email })
     .then(user => {
       if (user) {
-        const error = new Error('Email Exists.');
-        error.statusCode = 409;
-        error.isOperational = true;
-        throw error;
+        throw createError(409, 'Email Exists.', {
+          isOperational: true,
+          isResSent: false,
+        });
       }
       return bcrypt.hash(password, 12);
     })
@@ -38,7 +44,6 @@ exports.signup = (req, res, next) => {
     })
     .then(([accessToken]) => {
       return res.status(201).json({
-        error: false,
         message: 'User Successfully Created!',
         token: accessToken,
         userId: createdUser._id.toString(),
@@ -76,10 +81,10 @@ exports.login = (req, res, next) => {
       password.length <= 30;
 
     if (!isValid) {
-      const error = new Error('Error with body sent');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'Body is invalid.', {
+        isOperational: true,
+        isResSent: false,
+      });
     } else {
       return isValid;
     }
@@ -90,10 +95,7 @@ exports.login = (req, res, next) => {
     .then(() => User.findOne({ email: email }))
     .then(user => {
       if (!user) {
-        const error = new Error('Invalid Login');
-        error.statusCode = 401;
-        error.isOperational = true;
-        throw error;
+        throw userNotFoundError;
       }
       loadedUser = user;
       // console.log(user.password);
@@ -102,16 +104,15 @@ exports.login = (req, res, next) => {
     })
     .then(isEqual => {
       if (!isEqual) {
-        const error = new Error('Invalid Login');
-        error.statusCode = 401;
-        error.isOperational = true;
-        throw error;
+        throw createError(401, 'Invalid Login', {
+          isOperational: true,
+          isResSent: false,
+        });
       }
       return tokensUtil.createTokens(loadedUser, config.secret);
     })
     .then(([accessToken]) => {
       res.status(200).json({
-        error: false,
         message: 'User Successfully Logged In!',
         token: accessToken,
         userId: loadedUser._id.toString(),
@@ -143,12 +144,10 @@ exports.postSendResetEmail = (req, res, next) => {
       reg.test(email);
 
     if (!isValid) {
-      const error = new Error(
-        'Error with email provided, please check format and type'
-      );
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'Email is invalid.', {
+        isOperational: true,
+        isResSent: false,
+      });
     } else {
       return isValid;
     }
@@ -161,10 +160,7 @@ exports.postSendResetEmail = (req, res, next) => {
     .then(() => User.findOne({ email }))
     .then(user => {
       if (!user) {
-        const error = new Error('Invalid Login');
-        error.statusCode = 401;
-        error.isOperational = true;
-        throw error;
+        throw userNotFoundError;
       } else {
         foundUser = user;
         // const token = tokensUtil.createResetPassToken(user, config.resetSecret);
@@ -204,7 +200,6 @@ exports.postSendResetEmail = (req, res, next) => {
     })
     .then(() =>
       res.status(200).json({
-        error: false,
         message: 'Successfully sent email!',
         email: email,
         token: token,
@@ -224,19 +219,20 @@ exports.getResetPassword = (req, res, next) => {
 
   const validation = userId => {
     if (!userId) {
-      const error = new Error('User ID not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'User ID not provided.', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     if (
       !mongoose.Types.ObjectId.isValid(userId) ||
       !/^[a-fA-F0-9]{24}$/.test(userId)
     ) {
-      const error = new Error('User ID invalid!');
-      error.statusCode = 422;
-      throw error;
+      throw createError(422, 'User ID invalid.', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
   };
 
@@ -245,14 +241,9 @@ exports.getResetPassword = (req, res, next) => {
     .then(() => User.findById(userId))
     .then(user => {
       if (!user) {
-        const error = new Error('User does not exist');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw userNotFoundError;
       } else {
-        return res
-          .status(200)
-          .json({ error: false, message: 'Enter your new password!' });
+        return res.status(200).json({ message: 'Enter your new password!' });
       }
     })
     .catch(err => {
@@ -269,27 +260,27 @@ exports.patchResetPassword = (req, res, next) => {
 
   const validation = (userId, newPassword) => {
     if (!userId || !newPassword) {
-      const error = new Error('User ID not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Data not provided.', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     if (
       !mongoose.Types.ObjectId.isValid(userId) ||
       !/^[a-fA-F0-9]{24}$/.test(userId)
     ) {
-      const error = new Error('User ID invalid!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'User ID invalid.', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     if (newPassword.length > 30 || newPassword.length < 5) {
-      const error = new Error('Password format is invalid!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'Password invalid.', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
   };
 
@@ -300,10 +291,7 @@ exports.patchResetPassword = (req, res, next) => {
     .then(() => User.findById(userId))
     .then(user => {
       if (!user) {
-        const error = new Error('User does not exist');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw userNotFoundError;
       } else {
         foundUser = user;
         return bcrypt.hash(newPassword, 12);
@@ -319,7 +307,6 @@ exports.patchResetPassword = (req, res, next) => {
     })
     .then(([accessToken]) => {
       return res.status(201).json({
-        error: false,
         message: 'Password updated!',
         token: accessToken,
         userId: foundUser._id.toString(),

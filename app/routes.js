@@ -4,6 +4,8 @@ const artistsRoutes = require('../routes/artists');
 const profileRoutes = require('../routes/profile');
 const feedbackRoutes = require('../routes/feedback');
 const authRoutes = require('../routes/auth');
+const websiteRoutes = require('../routes/website');
+const errorRoutes = require('../routes/errors');
 
 exports.initRoutes = app => {
   app.use('/exhibitions', exhibitionsRoutes);
@@ -12,4 +14,6 @@ exports.initRoutes = app => {
   app.use('/feedback', feedbackRoutes);
   app.use('/auth', authRoutes);
   app.use('/profile', profileRoutes);
+  app.get('/', websiteRoutes);
+  app.use(errorRoutes);
 };

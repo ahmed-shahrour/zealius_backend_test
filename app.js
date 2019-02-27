@@ -1,14 +1,12 @@
 const express = require('express');
 const winston = require('./winston');
 const mongoose = require('mongoose');
-const appRoot = require('app-root-path');
 
 mongoose.plugin(require('./util/diffPlugin'));
 
 const { preSetup } = require('./app/beforeInitRoutes');
 const { initRoutes } = require('./app/routes');
 const { dbConnection } = require('./app/db');
-const errorRoutes = require('./routes/errors');
 
 // Initiating Express
 const app = express();
@@ -19,15 +17,6 @@ preSetup(app);
 // Routes of the app
 initRoutes(app);
 
-app.use('/', (req, res, next) => {
-  Promise.resolve()
-    .then(() => res.status(200).sendFile(`${appRoot}/views/welcome.html`))
-    .catch(error => next(error));
-});
-
-// Specific errors not handled by the above routes
-app.use(errorRoutes);
-
 // Global Error Handler
 app.use((error, req, res, next) => {
   if (res.headersSent) {
@@ -35,6 +24,7 @@ app.use((error, req, res, next) => {
   }
 
   console.log(error);
+  // console.log(error.isOperational);
 
   res.locals.message = error.message;
   res.locals.error = req.app.get('env') === 'development' ? error : {};
@@ -47,11 +37,17 @@ app.use((error, req, res, next) => {
 
   const status = error.statusCode || 500;
   const message = error.message || null;
-  const data = error.data || null;
 
-  res.set('Content-Type', 'application/json');
-  res.status(status);
-  res.json({ error: error.toString() });
+  if (!error.isResSent) {
+    res.set('Content-Type', 'application/json');
+    res.status(status);
+    res.json({ error: error.toString() });
+  }
+});
+
+process.on('uncaughtException', err => {
+  console.error('There was an uncaught error', err);
+  process.exit(1);
 });
 
 // Database connection
