@@ -34,7 +34,6 @@ exports.getExhibitions = (req, res, next) => {
           .populate('galleries', 'name')
           .populate('artists', 'name')
           .lean();
-        //check lean
       } else {
         return Exhibition.find()
           .skip((currentPage - 1) * perPage)
@@ -42,7 +41,6 @@ exports.getExhibitions = (req, res, next) => {
           .populate('galleries', 'name')
           .populate('artists', 'name')
           .lean();
-        //check lean
       }
     })
     .then(exhibitions => {
@@ -69,7 +67,6 @@ exports.getSelectedExhibition = (req, res, next) => {
     .populate('galleries', 'name')
     .populate('artists', 'name')
     .lean()
-    // check lean
     .then(exhibition => {
       if (!exhibition) {
         throw exhibitionNotFoundError;

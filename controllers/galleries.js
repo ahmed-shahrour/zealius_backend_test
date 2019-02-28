@@ -13,6 +13,7 @@ const galleryNotFoundError = createError(404, 'Could not find gallery.', {
 
 exports.getGalleries = (req, res, next) => {
   Gallery.find()
+    .lean()
     .then(galleries => {
       if (!galleries) {
         throw galleryNotFoundError;
@@ -36,6 +37,7 @@ exports.getGalleries = (req, res, next) => {
 exports.getSelectedGallery = (req, res, next) => {
   const galleryId = req.params.galleryId;
   Gallery.findById(galleryId)
+    .lean()
     .then(gallery => {
       if (!gallery) {
         throw galleryNotFoundError;

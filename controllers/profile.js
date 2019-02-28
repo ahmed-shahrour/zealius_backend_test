@@ -14,6 +14,7 @@ const userNotFoundError = createError(404, 'Could not find user.', {
 exports.getProfile = (req, res, next) => {
   const userId = req.userId;
   User.findById(userId)
+    .lean()
     .then(user => {
       if (!user) {
         throw userNotFoundError;

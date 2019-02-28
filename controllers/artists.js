@@ -12,6 +12,7 @@ const artistNotFoundError = createError(404, 'Could not find artist.', {
 
 exports.getArtists = (req, res, next) => {
   Artist.find()
+    .lean()
     .then(artists => {
       if (!artists) {
         throw createError(404, 'Could not find artists.', {
@@ -36,6 +37,7 @@ exports.getArtists = (req, res, next) => {
 exports.getSelectedArtist = (req, res, next) => {
   const artistId = req.params.artistId;
   Artist.findById(artistId)
+    .lean()
     .then(artist => {
       if (!artist) {
         throw artistNotFoundError;
