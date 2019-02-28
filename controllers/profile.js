@@ -1,25 +1,27 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+const createError = require('http-errors');
 
 const User = require('../models/user');
 const tokensUtil = require('../util/creatingTokens');
 const config = require('../config');
+
+const userNotFoundError = createError(404, 'Could not find user.', {
+  isOperational: true,
+  isResSent: false,
+});
 
 exports.getProfile = (req, res, next) => {
   const userId = req.userId;
   User.findById(userId)
     .then(user => {
       if (!user) {
-        const error = new Error('Could not find user');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw userNotFoundError;
       }
       return user;
     })
     .then(result => {
       res.status(200).json({
-        error: false,
         message: 'Fetched user profile successfully!',
         profile: {
           _id: result._id.toString(),
@@ -41,14 +43,11 @@ exports.getProfile = (req, res, next) => {
 
 exports.postProfile = (req, res, next) => {
   const userId = req.userId;
-  console.log(req.body);
   const { email, firstName, lastName, gender, age } = req.body;
   User.findById(userId)
     .then(user => {
       if (!user) {
-        const error = new Error('Could not find user');
-        error.statusCode = 404;
-        throw error;
+        throw userNotFoundError;
       }
 
       if (
@@ -58,7 +57,7 @@ exports.postProfile = (req, res, next) => {
         user.gender === gender &&
         user.age === age
       ) {
-        res.status(304).json({ error: false, message: 'User not modified' });
+        res.status(304).json({ message: 'User not modified' });
       }
 
       user.email = email;
@@ -70,7 +69,6 @@ exports.postProfile = (req, res, next) => {
     })
     .then(result => {
       res.status(201).json({
-        error: false,
         message: 'Saved profile information successfully!',
         profile: {
           _id: result._id.toString(),
@@ -111,20 +109,20 @@ exports.patchChangePassword = (req, res, next) => {
 
   const validation = (userId, oldPassword, newPassword) => {
     if (!userId || !oldPassword || !newPassword) {
-      const error = new Error('User ID not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'User ID not provided', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     if (
       !mongoose.Types.ObjectId.isValid(userId) ||
       !/^[a-fA-F0-9]{24}$/.test(userId)
     ) {
-      const error = new Error('User ID invalid!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'User ID invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     if (
@@ -133,9 +131,10 @@ exports.patchChangePassword = (req, res, next) => {
       newPassword.length > 30 ||
       newPassword.length < 5
     ) {
-      const error = new Error('Password format is invalid!');
-      error.statusCode = 422;
-      throw error;
+      throw createError(422, 'Password format is invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
   };
 
@@ -146,10 +145,7 @@ exports.patchChangePassword = (req, res, next) => {
     .then(() => User.findById(userId))
     .then(user => {
       if (!user) {
-        const error = new Error('User does not exist');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw userNotFoundError;
       } else {
         foundUser = user;
         return bcrypt.compare(oldPassword, user.password);
@@ -157,10 +153,10 @@ exports.patchChangePassword = (req, res, next) => {
     })
     .then(isEqual => {
       if (!isEqual) {
-        const error = new Error('Invalid password');
-        error.statusCode = 401;
-        error.isOperational = true;
-        throw error;
+        throw createError(401, 'Invalid password', {
+          isOperational: true,
+          isResSent: false,
+        });
       } else {
         return bcrypt.hash(newPassword, 12);
       }
@@ -178,7 +174,6 @@ exports.patchChangePassword = (req, res, next) => {
     })
     .then(([accessToken]) =>
       res.status(200).json({
-        error: false,
         message: 'Successfully Changed User Password!',
         token: accessToken,
         userId: userId,

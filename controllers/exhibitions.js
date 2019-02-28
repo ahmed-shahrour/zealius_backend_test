@@ -1,10 +1,24 @@
 const mongoose = require('mongoose');
 const moment = require('moment');
 const _ = require('lodash');
+const createError = require('http-errors');
 
 const Exhibition = require('../models/exhibition');
 const Gallery = require('../models/gallery');
 const Artist = require('../models/artist');
+
+const exhibitionNotFoundError = createError(404, 'Could not find exhibition.', {
+  isOperational: true,
+  isResSent: false,
+});
+const galleryNotFoundError = createError(404, 'Could not find gallery.', {
+  isOperational: true,
+  isResSent: false,
+});
+const artistNotFoundError = createError(404, 'Could not find artist.', {
+  isOperational: true,
+  isResSent: false,
+});
 
 exports.getExhibitions = (req, res, next) => {
   const isRefresh = req.query.refresh == 'true';
@@ -33,13 +47,9 @@ exports.getExhibitions = (req, res, next) => {
     })
     .then(exhibitions => {
       if (!exhibitions) {
-        const error = new Error('Could not find exhibitions.');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw exhibitionNotFoundError;
       }
       return res.status(200).json({
-        error: false,
         message: 'Fetched exhibitions successfully',
         exhibitions: exhibitions,
       });
@@ -62,13 +72,9 @@ exports.getSelectedExhibition = (req, res, next) => {
     // check lean
     .then(exhibition => {
       if (!exhibition) {
-        const error = new Error('Could not find exhibition.');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw exhibitionNotFoundError;
       }
       return res.status(200).json({
-        error: false,
         message: 'Fetched selected exhibition successfully!',
         exhibition: exhibition,
       });
@@ -87,12 +93,14 @@ exports.postExhibition = (req, res, next) => {
   const validation = (title, galleries, artists, startDate, endDate) => {
     // All fields must be provided in the parameters
     if (!title || !galleries || !artists || !startDate || !endDate) {
-      const error = new Error(
-        'Required Info to update exhibition not provided!'
+      throw createError(
+        400,
+        'Required Info to update exhibition not provided.',
+        {
+          isOperational: true,
+          isResSent: false,
+        }
       );
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
     }
 
     // Ensure endDate and startDate is in correct format
@@ -104,18 +112,18 @@ exports.postExhibition = (req, res, next) => {
       !moment(endDate, 'YYYY-MM-DD', true).isValid() ||
       !moment(startDate, 'YYYY-MM-DD', true).isValid()
     ) {
-      const error = new Error('endDate and startDate have invalid format');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'endDate and startDate are invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     // Ensure endDate > startDate
     if (moment(endDate).isBefore(startDate)) {
-      const error = new Error('endDate and startDate are dodgy');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'endDate is before startDate', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     // Ensure galleries and artists arrays are not too long, or else someone can fuck the database with too many writes.
@@ -125,10 +133,10 @@ exports.postExhibition = (req, res, next) => {
       artists.length > 50 ||
       artists.length === 0
     ) {
-      const error = new Error('Number of Ids provided is invalid');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'Number of Ids provided is invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
     // Ensure gallery ids in array provided looks truthy and is actually available in the database
     for (let i = 0; i < galleries.length; i++) {
@@ -139,10 +147,7 @@ exports.postExhibition = (req, res, next) => {
         Gallery.findById(galleries[i])
           .then(foundGallery => {
             if (!foundGallery) {
-              const error = new Error('gallery id not found!');
-              error.statusCode = 404;
-              error.isOperational = true;
-              throw error;
+              throw galleryNotFoundError;
             }
             return foundGallery;
           })
@@ -153,10 +158,10 @@ exports.postExhibition = (req, res, next) => {
             next(err);
           });
       } else {
-        const error = new Error('Invalid gallery Id');
-        error.statusCode(422);
-        error.isOperational = true;
-        throw error;
+        throw createError(400, 'Invalid gallery ID', {
+          isOperational: true,
+          isResSent: false,
+        });
       }
     }
 
@@ -169,10 +174,7 @@ exports.postExhibition = (req, res, next) => {
         Artist.findById(artists[i])
           .then(foundArtist => {
             if (!foundArtist) {
-              const error = new Error('artist id not found!');
-              error.statusCode = 404;
-              error.isOperational = true;
-              throw error;
+              throw artistNotFoundError;
             }
             return foundArtist;
           })
@@ -183,10 +185,10 @@ exports.postExhibition = (req, res, next) => {
             next(err);
           });
       } else {
-        const error = new Error('Invalid artist Id');
-        error.statusCode(422);
-        error.isOperational = true;
-        throw error;
+        throw createError(400, 'Invalid artist ID', {
+          isOperational: true,
+          isResSent: false,
+        });
       }
     }
   };
@@ -211,16 +213,12 @@ exports.postExhibition = (req, res, next) => {
           Gallery.findById(galleries[i]._id)
             .then(gallery => {
               if (!gallery) {
-                const error = new Error('Cannot find gallery!');
-                error.statusCode = 404;
-                error.isOperational = true;
-                throw error;
+                throw galleryNotFoundError;
               } else {
                 gallery.exhibitions.push(exhibition);
-                return gallery;
+                return gallery.save();
               }
             })
-            .then(gallery => gallery.save())
             .catch(error => {
               throw error;
             });
@@ -233,16 +231,12 @@ exports.postExhibition = (req, res, next) => {
           Artist.findById(artists[i]._id)
             .then(artist => {
               if (!artist) {
-                const error = new Error('Cannot find artist!');
-                error.statusCode = 404;
-                error.isOperational = true;
-                throw error;
+                throw artistNotFoundError;
               } else {
                 artist.exhibitions.push(exhibition);
-                return artist;
+                return artist.save();
               }
             })
-            .then(artist => artist.save())
             .catch(error => {
               throw error;
             });
@@ -251,9 +245,8 @@ exports.postExhibition = (req, res, next) => {
 
       galleryArrayUpdate();
       artistArrayUpdate();
-      return;
+      return exhibition.save();
     })
-    .then(() => exhibition.save())
     .then(() => {
       res
         .status(201)
@@ -279,12 +272,11 @@ exports.patchExhibition = (req, res, next) => {
       !req.body ||
       (!title && !galleries && !artists && !startDate && !endDate)
     ) {
-      const error = new Error(
-        'Required Info to update exhibition not provided!'
+      throw createError(
+        400,
+        'Required Info to update exhibition not provided',
+        { isOperational: true, isResSent: false }
       );
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
     }
 
     // Ensure exhibition id looks truthy
@@ -292,10 +284,10 @@ exports.patchExhibition = (req, res, next) => {
       !mongoose.Types.ObjectId.isValid(exhibitionId) ||
       !/^[a-fA-F0-9]{24}$/.test(exhibitionId)
     ) {
-      const error = new Error('Exhibition ID invalid!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Exhibition ID invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     // Ensure endDate and startDate is in correct format
@@ -308,18 +300,18 @@ exports.patchExhibition = (req, res, next) => {
       !moment(endDate, 'YYYY-MM-DD', true).isValid() ||
       !moment(startDate, 'YYYY-MM-DD', true).isValid()
     ) {
-      const error = new Error('endDate and startDate have invalid format');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'endDate and startDate are invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     // Ensure endDate > startDate
     if (moment(endDate).isBefore(startDate)) {
-      const error = new Error('endDate and startDate are dodgy');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'endDate and startDate are invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     // Ensure galleries and artists arrays are not too long, or else someone can fuck the database with too many writes.
@@ -329,10 +321,10 @@ exports.patchExhibition = (req, res, next) => {
       artists.length > 50 ||
       artists.length === 0
     ) {
-      const error = new Error('Number of Ids provided is invalid');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'Number of Ids provided is invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     // Ensure gallery ids in array provided looks truthy and is actually available in the database
@@ -344,10 +336,7 @@ exports.patchExhibition = (req, res, next) => {
         Gallery.findById(galleries[i])
           .then(foundGallery => {
             if (!foundGallery) {
-              const error = new Error('gallery id not found!');
-              error.statusCode = 404;
-              error.isOperational = true;
-              throw error;
+              throw galleryNotFoundError;
             }
             return foundGallery;
           })
@@ -358,10 +347,10 @@ exports.patchExhibition = (req, res, next) => {
             next(err);
           });
       } else {
-        const error = new Error('Invalid gallery Id');
-        error.statusCode(422);
-        error.isOperational = true;
-        throw error;
+        throw createError(400, 'Invalid gallery ID', {
+          isOperational: true,
+          isResSent: false,
+        });
       }
     }
 
@@ -374,10 +363,7 @@ exports.patchExhibition = (req, res, next) => {
         Artist.findById(artists[i])
           .then(foundArtist => {
             if (!foundArtist) {
-              const error = new Error('artist id not found!');
-              error.statusCode = 404;
-              error.isOperational = true;
-              throw error;
+              throw artistNotFoundError;
             }
             return foundArtist;
           })
@@ -388,10 +374,10 @@ exports.patchExhibition = (req, res, next) => {
             next(err);
           });
       } else {
-        const error = new Error('Invalid artist Id');
-        error.statusCode(422);
-        error.isOperational = true;
-        throw error;
+        throw createError(400, 'Invalid artist ID', {
+          isOperational: true,
+          isResSent: false,
+        });
       }
     }
   };
@@ -401,26 +387,23 @@ exports.patchExhibition = (req, res, next) => {
     const arrayIdsToAddExhibition = _.difference(newArray, oldArray);
 
     for (let i = 0; i < arrayIdsToRemoveExhibition.length; i++) {
-      let doc;
       model
         .findById(arrayIdsToRemoveExhibition[i])
         .then(foundDoc => {
           if (!foundDoc) {
-            const error = new Error(
-              `${arrayIdsToRemoveExhibition[i]} does not exist for pulling`
+            throw createError(
+              404,
+              `${arrayIdsToRemoveExhibition[i]} does not exist for pulling`,
+              { isOperational: true, isResSent: false }
             );
-            error.statusCode = 404;
-            error.isOperational = true;
-            throw error;
           } else {
             foundDoc.exhibitions.splice(
               foundDoc.exhibitions.indexOf(exhibitionId),
               1
             );
-            return (doc = foundDoc);
+            return foundDoc.save();
           }
         })
-        .then(() => doc.save())
         .catch(err => {
           if (!err.statusCode) {
             err.statusCode = 500;
@@ -430,23 +413,20 @@ exports.patchExhibition = (req, res, next) => {
     }
 
     for (let i = 0; i < arrayIdsToAddExhibition.length; i++) {
-      let doc;
       model
         .findById(arrayIdsToAddExhibition[i])
         .then(foundDoc => {
           if (!foundDoc) {
-            const error = new Error(
-              `${arrayIdsToAddExhibition[i]} does not exist for pushing`
+            throw createError(
+              404,
+              `${arrayIdsToAddExhibition[i]} does not exist for pushing`,
+              { isOperational: true, isResSent: false }
             );
-            error.statusCode = 404;
-            error.isOperational = true;
-            throw error;
           } else {
             foundDoc.exhibitions.push(exhibitionId);
-            return (doc = foundDoc);
+            return foundDoc.save();
           }
         })
-        .then(() => doc.save())
         .catch(err => {
           if (!err.statusCode) {
             err.statusCode = 500;
@@ -465,10 +445,7 @@ exports.patchExhibition = (req, res, next) => {
     .then(() => Exhibition.findById(_id))
     .then(foundExhibition => {
       if (!foundExhibition) {
-        const error = new Error('Exhibition not found!');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw exhibitionNotFoundError;
       } else {
         return (oldExhibition = foundExhibition);
       }
@@ -491,7 +468,6 @@ exports.patchExhibition = (req, res, next) => {
     })
     .then(() =>
       res.status(200).json({
-        error: false,
         message: 'Successfully updated the exhibition and other dependencies',
         exhibitionId: _id,
       })
@@ -510,17 +486,17 @@ exports.deleteExhibition = (req, res, next) => {
   const validation = id => {
     //Check if exhibitionId is provided
     if (!exhibitionId) {
-      const error = new Error('Exhibition ID not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Exhibition ID not provided', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     if (!mongoose.Types.ObjectId.isValid(id) || !/^[a-fA-F0-9]{24}$/.test(id)) {
-      const error = new Error('Exhibition ID invalid!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Exhibition ID invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
   };
 
@@ -531,10 +507,7 @@ exports.deleteExhibition = (req, res, next) => {
     .then(() => Exhibition.findById(exhibitionId))
     .then(foundExhibition => {
       if (!foundExhibition) {
-        const error = new Error('Exhibition does not exist!');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw exhibitionNotFoundError;
       } else {
         return (deleteExhibitionObj = foundExhibition);
       }
@@ -580,7 +553,6 @@ exports.deleteExhibition = (req, res, next) => {
         Exhibition.findByIdAndDelete(exhibitionId)
           .then(() => {
             res.status(200).json({
-              error: false,
               message:
                 'Successfully deleted exhibition and updated relevant dependancies!',
               exhibitionId: exhibitionId,

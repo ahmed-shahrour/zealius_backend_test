@@ -1,11 +1,13 @@
 const Feedback = require('../models/feedback');
+const createError = require('http-errors');
 
 exports.postFeedback = (req, res, next) => {
   const feedback = req.body.feedback;
   if (!feedback) {
-    const error = new Error('No Feedback Provided');
-    error.statusCode = 401;
-    throw error;
+    throw createError(400, 'No Feedback Provided', {
+      isOperational: true,
+      isResSent: false,
+    });
   }
   const newFeedback = new Feedback({
     feedback: feedback,
@@ -14,7 +16,6 @@ exports.postFeedback = (req, res, next) => {
     .save()
     .then(feedback => {
       res.status(201).json({
-        error: false,
         message: 'Successfully submitted a feedback!',
       });
     })

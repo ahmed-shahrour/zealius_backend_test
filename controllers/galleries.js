@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 const _ = require('lodash');
+const createError = require('http-errors');
 
 const Gallery = require('../models/gallery');
+
+const galleryNotFoundError = createError(404, 'Could not find gallery.', {
+  isOperational: true,
+  isResSent: false,
+});
 
 //Dont forget to check if ObjectId provided is trueish
 
@@ -9,16 +15,12 @@ exports.getGalleries = (req, res, next) => {
   Gallery.find()
     .then(galleries => {
       if (!galleries) {
-        const error = new Error('Could not find galleries.');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw galleryNotFoundError;
       }
       return galleries;
     })
     .then(result => {
       res.status(200).json({
-        error: false,
         message: 'Fetched galleries successfully.',
         galleries: result,
       });
@@ -36,16 +38,12 @@ exports.getSelectedGallery = (req, res, next) => {
   Gallery.findById(galleryId)
     .then(gallery => {
       if (!gallery) {
-        const error = new Error('Could not find gallery.');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw galleryNotFoundError;
       }
       return gallery;
     })
     .then(result => {
       res.status(200).json({
-        error: false,
         message: 'Fetched selected gallery successfully!',
         gallery: result,
       });
@@ -63,10 +61,10 @@ exports.postGallery = (req, res, next) => {
 
   const validation = () => {
     if (!name || !location || !contact || !description) {
-      const error = new Error('Required Info to create gallery not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Required Info to create gallery not provided', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     const locationProperties = [
@@ -91,10 +89,10 @@ exports.postGallery = (req, res, next) => {
       !propertyValidation(location, locationProperties) ||
       !propertyValidation(contact, contactProperties)
     ) {
-      const error = new Error('Required Info for array not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Required Info for array not provided', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
   };
 
@@ -134,10 +132,10 @@ exports.patchGallery = (req, res, next) => {
         !req.body.contact &&
         !req.body.description)
     ) {
-      const error = new Error('Required Info to patch gallery not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Required Info to patch gallery not provided', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
   };
 
@@ -146,10 +144,7 @@ exports.patchGallery = (req, res, next) => {
     .then(() => Gallery.findById(galleryId))
     .then(foundGallery => {
       if (!foundGallery) {
-        const error = new Error('Gallery not found');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw galleryNotFoundError;
       } else {
         for (let i in req.body) {
           if (!_.isEqual(foundGallery[i], req.body[i])) {
@@ -189,20 +184,20 @@ exports.deleteGallery = (req, res, next) => {
 
   const validation = () => {
     if (!galleryId) {
-      const error = new Error('Gallery ID not provided!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(400, 'Gallery ID not provided', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
 
     if (
       !mongoose.Types.ObjectId.isValid(galleryId) ||
       !/^[a-fA-F0-9]{24}$/.test(galleryId)
     ) {
-      const error = new Error('Gallery ID invalid!');
-      error.statusCode = 422;
-      error.isOperational = true;
-      throw error;
+      throw createError(422, 'Gallery ID invalid', {
+        isOperational: true,
+        isResSent: false,
+      });
     }
   };
 
@@ -211,22 +206,18 @@ exports.deleteGallery = (req, res, next) => {
     .then(() => Gallery.findById(galleryId))
     .then(gallery => {
       if (!gallery) {
-        const error = new Error('Gallery does not exist!');
-        error.statusCode = 404;
-        error.isOperational = true;
-        throw error;
+        throw galleryNotFoundError;
       } else if (gallery.exhibitions.length !== 0) {
-        const error = new Error('Cannot Delete a Gallery with exhibitions!');
-        error.statusCode = 403;
-        error.isOperational = true;
-        throw error;
+        throw createError(403, 'Cannot delete a Gallery with exhibitions', {
+          isOperational: true,
+          isResSent: false,
+        });
       } else {
         return Gallery.findByIdAndDelete(gallery._id);
       }
     })
     .then(deletedGallery =>
       res.json({
-        error: false,
         message: 'Successfully Deleted Gallery',
         galleryId: deletedGallery._id,
       })
