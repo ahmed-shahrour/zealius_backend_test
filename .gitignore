@@ -1,3 +1,5 @@
 node_modules
 package-lock.json
-logs
+logs/app.log
+logs/errors.log
+logs/unhandledErrors.log
