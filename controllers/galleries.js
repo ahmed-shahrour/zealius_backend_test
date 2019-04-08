@@ -1,12 +1,21 @@
 const mongoose = require('mongoose');
 const _ = require('lodash');
 const createError = require('http-errors');
+const Bottleneck = require('bottleneck');
 
 const Gallery = require('../models/gallery');
 
 const galleryNotFoundError = createError(404, 'Could not find gallery.', {
   isOperational: true,
   isResSent: false,
+});
+
+const group = new Bottleneck.Group({
+  maxConcurrent: 1,
+  minTime: 0,
+  highWater: 10,
+  strategy: Bottleneck.strategy.BLOCK,
+  penalty: 5000,
 });
 
 //Dont forget to check if ObjectId provided is trueish
@@ -36,18 +45,20 @@ exports.getGalleries = (req, res, next) => {
 
 exports.getSelectedGallery = (req, res, next) => {
   const galleryId = req.params.galleryId;
-  Gallery.findById(galleryId)
-    .lean()
+  group
+    .key(req.ip)
+    .schedule(() => {
+      return Gallery.findById(galleryId)
+        .select('_id name location contact description')
+        .lean();
+    })
     .then(gallery => {
       if (!gallery) {
         throw galleryNotFoundError;
       }
-      return gallery;
-    })
-    .then(result => {
-      res.status(200).json({
+      return res.status(200).json({
         message: 'Fetched selected gallery successfully!',
-        gallery: result,
+        gallery: gallery,
       });
     })
     .catch(err => {

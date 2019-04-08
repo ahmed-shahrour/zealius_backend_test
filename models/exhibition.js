@@ -21,37 +21,15 @@ const exhibitionSchema = new Schema(
         required: true,
       },
     ],
-    // exhibitions: [
-    //   {
-    //     _id: {
-    //       type: Schema.Types.ObjectId,
-    //       ref: 'Gallery',
-    //       required: true,
-    //     },
-    //     name: {
-    //       type: String,
-    //       // required: true,
-    //     },
-    //   },
-    // ],
-    // artists: [
-    //   {
-    //     _id: {
-    //       type: Schema.Types.ObjectId,
-    //       ref: 'Artist',
-    //       required: true,
-    //     },
-    //     name: {
-    //       type: String,
-    //       // required: true,
-    //     },
-    //   },
-    // ],
     startDate: {
-      type: String,
+      type: Date,
       required: true,
     },
     endDate: {
+      type: Date,
+      required: true,
+    },
+    description: {
       type: String,
       required: true,
     },

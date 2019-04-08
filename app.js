@@ -24,7 +24,6 @@ app.use((error, req, res, next) => {
   }
 
   console.log(error);
-  // console.log(error.isOperational);
 
   res.locals.message = error.message;
   res.locals.error = req.app.get('env') === 'development' ? error : {};

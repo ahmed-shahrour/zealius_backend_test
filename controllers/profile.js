@@ -71,14 +71,6 @@ exports.postProfile = (req, res, next) => {
     .then(result => {
       res.status(201).json({
         message: 'Saved profile information successfully!',
-        profile: {
-          _id: result._id.toString(),
-          email: result.email,
-          firstName: result.firstName,
-          lastName: result.lastName,
-          gender: result.gender,
-          age: result.age,
-        },
       });
       return result;
     })
@@ -168,10 +160,7 @@ exports.patchChangePassword = (req, res, next) => {
     })
     .then(savedUser => {
       foundUser = savedUser;
-      return tokensUtil.createTokens(
-        savedUser,
-        config.secret + savedUser.password
-      );
+      return tokensUtil.createTokens(savedUser, config.secret);
     })
     .then(([accessToken]) =>
       res.status(200).json({

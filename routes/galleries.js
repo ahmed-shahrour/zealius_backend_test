@@ -5,7 +5,7 @@ const checkAdminToken = require('../middlewares/checkAdminToken');
 
 const router = express.Router();
 
-router.get('/', galleriesController.getGalleries);
+router.get('/', checkAdminToken, galleriesController.getGalleries);
 router.get('/:galleryId', galleriesController.getSelectedGallery);
 
 router.post('/new', checkAdminToken, galleriesController.postGallery);

@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const sgMail = require('@sendgrid/mail');
 const mongoose = require('mongoose');
 const createError = require('http-errors');
+const Bottleneck = require('bottleneck');
 
 const User = require('../models/user');
 const tokensUtil = require('../util/creatingTokens');
@@ -16,12 +17,24 @@ const userNotFoundError = createError(404, 'Could not find user.', {
   isResSent: false,
 });
 
+const group = new Bottleneck.Group({
+  maxConcurrent: 1,
+  minTime: 2000,
+  highWater: 3,
+  strategy: Bottleneck.strategy.BLOCK,
+  penalty: 5000,
+});
+
 exports.signup = (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
   let createdUser;
 
-  User.findOne({ email: email })
+  group
+    .key(req.ip)
+    .schedule(() => {
+      return User.findOne({ email: email });
+    })
     .then(user => {
       if (user) {
         throw createError(409, 'Email Exists.', {
@@ -90,16 +103,18 @@ exports.login = (req, res, next) => {
     }
   };
 
-  Promise.resolve()
-    .then(() => validation(email, password))
-    .then(() => User.findOne({ email: email }))
+  group
+    .key(req.ip)
+    .schedule(() => {
+      return Promise.resolve()
+        .then(() => validation(email, password))
+        .then(() => User.findOne({ email: email }));
+    })
     .then(user => {
       if (!user) {
         throw userNotFoundError;
       }
       loadedUser = user;
-      // console.log(user.password);
-      // console.log(password);
       return bcrypt.compare(password, user.password);
     })
     .then(isEqual => {
@@ -155,9 +170,13 @@ exports.postSendResetEmail = (req, res, next) => {
 
   let foundUser;
 
-  Promise.resolve()
-    .then(() => validation(email))
-    .then(() => User.findOne({ email }))
+  group
+    .key(req.ip)
+    .schedule(() => {
+      return Promise.resolve()
+        .then(() => validation(email))
+        .then(() => User.findOne({ email }));
+    })
     .then(user => {
       if (!user) {
         throw userNotFoundError;
@@ -201,9 +220,6 @@ exports.postSendResetEmail = (req, res, next) => {
     .then(() =>
       res.status(200).json({
         message: 'Successfully sent email!',
-        email: email,
-        token: token,
-        //REMOVE TOKEN ABOVE AFTER TESTING
       })
     )
     .catch(err => {

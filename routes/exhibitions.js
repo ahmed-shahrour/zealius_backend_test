@@ -6,11 +6,19 @@ const checkAdminToken = require('../middlewares/checkAdminToken');
 const router = express.Router();
 
 router.get('/', exhibitionsController.getExhibitions);
-router.get('/:exhibitionId', exhibitionsController.getSelectedExhibition);
+router.get(
+  '/:exhibitionId',
+  checkAdminToken,
+  exhibitionsController.getSelectedExhibition
+);
 
 router.post('/new', checkAdminToken, exhibitionsController.postExhibition);
 
-router.patch('/update/:exhibitionId', checkAdminToken, exhibitionsController.patchExhibition);
+router.patch(
+  '/update/:exhibitionId',
+  checkAdminToken,
+  exhibitionsController.patchExhibition
+);
 
 router.delete(
   '/delete/:exhibitionId',

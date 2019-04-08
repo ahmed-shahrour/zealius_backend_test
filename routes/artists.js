@@ -5,8 +5,8 @@ const checkAdminToken = require('../middlewares/checkAdminToken');
 
 const router = express.Router();
 
-router.get('/', artistsController.getArtists);
-router.get('/:artistId', artistsController.getSelectedArtist);
+router.get('/', checkAdminToken, artistsController.getArtists);
+router.get('/:artistId', checkAdminToken, artistsController.getSelectedArtist);
 
 router.post('/new', checkAdminToken, artistsController.postArtist);
 

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const moment = require('moment');
 const _ = require('lodash');
 const createError = require('http-errors');
+const Bottleneck = require('bottleneck');
 
 const Exhibition = require('../models/exhibition');
 const Gallery = require('../models/gallery');
@@ -20,22 +21,41 @@ const artistNotFoundError = createError(404, 'Could not find artist.', {
   isResSent: false,
 });
 
+const group = new Bottleneck.Group({
+  maxConcurrent: 1,
+  minTime: 0,
+  highWater: 10,
+  strategy: Bottleneck.strategy.BLOCK,
+  penalty: 5000,
+});
+
 exports.getExhibitions = (req, res, next) => {
   const isRefresh = req.query.refresh == 'true';
   const currentPage = Number(req.query.page) || 1;
   const perPage = 8;
 
-  Exhibition.find()
-    .countDocuments()
-    .then(count => {
+  group
+    .key(req.ip)
+    .schedule(() => {
+      const now = new Date();
       if (isRefresh) {
-        return Exhibition.find()
+        return Exhibition.find({
+          startDate: { $lte: now },
+          endDate: { $gte: now },
+        })
+          .select('_id title galleries artists startDate endDate')
+          .sort({ endDate: 1 })
           .limit(perPage * currentPage)
           .populate('galleries', 'name')
           .populate('artists', 'name')
           .lean();
       } else {
-        return Exhibition.find()
+        return Exhibition.find({
+          startDate: { $lte: now },
+          endDate: { $gte: now },
+        })
+          .select('_id title galleries artists startDate endDate description')
+          .sort({ endDate: 1 })
           .skip((currentPage - 1) * perPage)
           .limit(perPage)
           .populate('galleries', 'name')
@@ -64,6 +84,7 @@ exports.getSelectedExhibition = (req, res, next) => {
   const exhibitionId = req.params.exhibitionId;
 
   Exhibition.findById(exhibitionId)
+    .select('_id title galleries artists startDate endDate description')
     .populate('galleries', 'name')
     .populate('artists', 'name')
     .lean()
@@ -102,12 +123,8 @@ exports.postExhibition = (req, res, next) => {
 
     // Ensure endDate and startDate is in correct format
     if (
-      endDate.length !== 10 ||
-      endDate.split('-').length !== 3 ||
-      startDate.length !== 10 ||
-      startDate.split('-').length !== 3 ||
-      !moment(endDate, 'YYYY-MM-DD', true).isValid() ||
-      !moment(startDate, 'YYYY-MM-DD', true).isValid()
+      !moment(endDate, true).isValid() ||
+      !moment(startDate, true).isValid()
     ) {
       throw createError(422, 'endDate and startDate are invalid', {
         isOperational: true,
@@ -245,7 +262,7 @@ exports.postExhibition = (req, res, next) => {
       return exhibition.save();
     })
     .then(() => {
-      res
+      return res
         .status(201)
         .json({ message: 'Exhibition Created!', exhibitionId: exhibition._id });
     })
@@ -290,12 +307,8 @@ exports.patchExhibition = (req, res, next) => {
     // Ensure endDate and startDate is in correct format
 
     if (
-      endDate.length !== 10 ||
-      endDate.split('-').length !== 3 ||
-      startDate.length !== 10 ||
-      startDate.split('-').length !== 3 ||
-      !moment(endDate, 'YYYY-MM-DD', true).isValid() ||
-      !moment(startDate, 'YYYY-MM-DD', true).isValid()
+      !moment(endDate, true).isValid() ||
+      !moment(startDate, true).isValid()
     ) {
       throw createError(422, 'endDate and startDate are invalid', {
         isOperational: true,
