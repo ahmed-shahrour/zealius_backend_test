@@ -14,6 +14,6 @@ exports.initRoutes = app => {
   app.use('/feedback', feedbackRoutes);
   app.use('/auth', authRoutes);
   app.use('/profile', profileRoutes);
-  app.get('/', websiteRoutes);
+  app.use('/', websiteRoutes);
   app.use(errorRoutes);
 };
