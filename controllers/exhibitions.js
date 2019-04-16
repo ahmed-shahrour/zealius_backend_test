@@ -56,7 +56,7 @@ exports.getExhibitions = (req, res, next) => {
         })
           .select('_id title galleries artists startDate endDate description')
           .sort({ endDate: 1 })
-          .skip((currentPage - 1) * perPage)
+          .skip(perPage * (currentPage - 1))
           .limit(perPage)
           .populate('galleries', 'name')
           .populate('artists', 'name')
