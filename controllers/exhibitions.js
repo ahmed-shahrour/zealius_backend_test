@@ -43,7 +43,7 @@ exports.getExhibitions = (req, res, next) => {
           startDate: { $lte: now },
           endDate: { $gte: now },
         })
-          .select('_id title galleries artists startDate endDate')
+          .select('_id title galleries artists startDate endDate description')
           .sort({ endDate: 1 })
           .limit(perPage * currentPage)
           .populate('galleries', 'name')
