@@ -106,11 +106,29 @@ exports.getSelectedExhibition = (req, res, next) => {
 };
 
 exports.postExhibition = (req, res, next) => {
-  const { title, galleries, artists, startDate, endDate } = req.body;
+  const { title, galleries, artists, description } = req.body;
+  let { startDate, endDate } = req.body;
 
-  const validation = (title, galleries, artists, startDate, endDate) => {
+  startDate = moment(new Date(startDate));
+  endDate = moment(new Date(endDate));
+
+  const validation = (
+    title,
+    description,
+    galleries,
+    artists,
+    startDate,
+    endDate
+  ) => {
     // All fields must be provided in the parameters
-    if (!title || !galleries || !artists || !startDate || !endDate) {
+    if (
+      !title ||
+      !description ||
+      !galleries ||
+      !artists ||
+      !startDate ||
+      !endDate
+    ) {
       throw createError(
         400,
         'Required Info to update exhibition not provided.',
@@ -210,7 +228,9 @@ exports.postExhibition = (req, res, next) => {
   let exhibition;
 
   Promise.resolve()
-    .then(() => validation(title, galleries, artists, startDate, endDate))
+    .then(() =>
+      validation(title, description, galleries, artists, startDate, endDate)
+    )
     .then(() => {
       return (exhibition = new Exhibition({
         title,
@@ -218,6 +238,7 @@ exports.postExhibition = (req, res, next) => {
         artists,
         startDate,
         endDate,
+        description,
       }));
     })
     .then(() => {
